@@ -43,6 +43,11 @@ const ToastUIMarkdownEditor = {
       type: "Bool",
     },
     {
+      name: "autofocus",
+      label: "Autofocus editor on load",
+      type: "Bool",
+    },
+    {
       name: "hide_image_button",
       label: "Remove 'Insert image' toolbar button",
       type: "Bool",
@@ -64,11 +69,7 @@ const ToastUIMarkdownEditor = {
     const taId = `in_${fieldName}_${Math.random().toString(36).slice(2)}`;
     const edId = `ed_${fieldName}_${Math.random().toString(36).slice(2)}`;
 
-    const heightPx =
-      attrs && typeof attrs.height !== "undefined"
-        ? Number(attrs.height) || 320
-        : 320;
-    const height = `${heightPx}px`;
+    const height = attrs && attrs.height ? String(attrs.height) + "px" : "320px";
     const placeholder =
       attrs && attrs.placeholder ? String(attrs.placeholder) : "";
     const hardwrap =
@@ -76,6 +77,7 @@ const ToastUIMarkdownEditor = {
 
     const hideImageButton = !!(attrs && attrs.hide_image_button);
     const autogrow = !!(attrs && attrs.autogrow);
+    const autofocus = !!(attrs && attrs.autofocus);
 
     // helper: convert soft line breaks to Markdown hard breaks (two spaces)
     const hardBreakFix = (md) => {
@@ -123,14 +125,13 @@ const ToastUIMarkdownEditor = {
       // hidden textarea carries the Markdown value
       textarea(
         { name: fieldName, id: taId, style: "display:none" },
-        text(v || ""),
+        text(v || "")
       ),
-      // local CSS tweaks for this instance only (scoped to autogrow mode)
       style(
-        `#${edId}.tui-autogrow .toastui-editor-ww-container{height:auto !important;}`,
+        `.placeholder { background-color: transparent !important;}`
       ),
       // visible editor
-      div({ id: edId, class: autogrow ? "tui-autogrow" : "" }),
+      div({ id: edId }),
       // init + sync
       script(
         domReady(`
@@ -142,7 +143,7 @@ const ToastUIMarkdownEditor = {
 
           const hideImageButton = ${JSON.stringify(hideImageButton)}
           const autogrow = ${JSON.stringify(autogrow)}
-          const minHeight = ${JSON.stringify(heightPx)}
+          const autofocus = ${JSON.stringify(autofocus)}
 
           const baseToolbar = [
             ['heading', 'bold', 'italic', 'strike'],
@@ -160,7 +161,9 @@ const ToastUIMarkdownEditor = {
 
           const ed = new toastui.Editor({
             el: el,
-            height: '${height}',
+            height: autogrow ? "auto" : "${height}",
+            minHeight: "${height}",
+            autofocus: autofocus,
             initialEditType: 'wysiwyg',
             usageStatistics: false,
             hideModeSwitch: true,
@@ -176,40 +179,6 @@ const ToastUIMarkdownEditor = {
           {
             const md = ed.getMarkdown()
             ta.value = hardBreakFix(md)
-          }
-
-          if(autogrow)
-          {
-            const editorRoot = el.querySelector('.toastui-editor-defaultUI') || el
-            const wwContainer = editorRoot.querySelector('.toastui-editor-ww-container')
-            const mdContainer = editorRoot.querySelector('.toastui-editor-md-container')
-            const contents =
-              (wwContainer && wwContainer.querySelector('.toastui-editor-contents')) ||
-              (mdContainer && mdContainer.querySelector('.toastui-editor-contents')) ||
-              editorRoot
-
-            let lastHeight = minHeight
-
-            const measureHeight = () =>
-            {
-              const toolbar = editorRoot.querySelector('.toastui-editor-toolbar')
-              const toolbarHeight = toolbar ? toolbar.offsetHeight : 0
-              const contentsHeight = contents ? contents.scrollHeight : minHeight
-              const extra = 24
-              return Math.max(minHeight, toolbarHeight + contentsHeight + extra)
-            }
-
-            const updateHeight = () =>
-            {
-              const newHeight = measureHeight()
-              if(Math.abs(newHeight - lastHeight) < 2) return
-              lastHeight = newHeight
-              if(ed.setHeight) ed.setHeight(newHeight)
-              el.style.height = newHeight + 'px'
-            }
-
-            ed.on('change', updateHeight)
-            updateHeight()
           }
 
           ed.on('change', sync)
