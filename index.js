@@ -6,6 +6,7 @@ const {
   textarea,
   text,
   script,
+  style,
   domReady,
 } = require("@saltcorn/markup/tags");
 
@@ -29,16 +30,54 @@ const ToastUIMarkdownEditor = {
   description: "WYSIWYG Markdown editor (TOAST UI) for String fields",
   type: "String",
   isEdit: true,
+  configFields: [
+    {
+      name: "height",
+      label: "Initial height (px)",
+      type: "Integer",
+      default: 320,
+    },
+    {
+      name: "autogrow",
+      label: "Auto-grow height with content",
+      type: "Bool",
+    },
+    {
+      name: "autofocus",
+      label: "Autofocus editor on load",
+      type: "Bool",
+    },
+    {
+      name: "hide_image_button",
+      label: "Remove 'Insert image' toolbar button",
+      type: "Bool",
+    },
+    {
+      name: "placeholder",
+      label: "Placeholder text",
+      type: "String",
+    },
+    {
+      name: "hardwrap",
+      label: "Preserve visual line breaks",
+      type: "Bool",
+      default: true,
+    },
+  ],
   run: (nm, v, attrs, cls) => {
     const fieldName = text(nm);
     const taId = `in_${fieldName}_${Math.random().toString(36).slice(2)}`;
     const edId = `ed_${fieldName}_${Math.random().toString(36).slice(2)}`;
 
-    const height = attrs && attrs.height ? String(attrs.height) : "320px";
+    const height = attrs && attrs.height ? String(attrs.height) + "px" : "320px";
     const placeholder =
       attrs && attrs.placeholder ? String(attrs.placeholder) : "";
     const hardwrap =
       attrs && typeof attrs.hardwrap === "boolean" ? attrs.hardwrap : true;
+
+    const hideImageButton = !!(attrs && attrs.hide_image_button);
+    const autogrow = !!(attrs && attrs.autogrow);
+    const autofocus = !!(attrs && attrs.autofocus);
 
     // helper: convert soft line breaks to Markdown hard breaks (two spaces)
     const hardBreakFix = (md) => {
@@ -88,6 +127,9 @@ const ToastUIMarkdownEditor = {
         { name: fieldName, id: taId, style: "display:none" },
         text(v || "")
       ),
+      style(
+        `.placeholder { background-color: transparent !important;}`
+      ),
       // visible editor
       div({ id: edId }),
       // init + sync
@@ -99,15 +141,23 @@ const ToastUIMarkdownEditor = {
           const el = document.getElementById('${edId}')
           if(!ta || !el) return
 
+          const hideImageButton = ${JSON.stringify(hideImageButton)}
+          const autogrow = ${JSON.stringify(autogrow)}
+          const autofocus = ${JSON.stringify(autofocus)}
+
           const ed = new toastui.Editor({
             el: el,
-            height: '${height}',
+            height: autogrow ? "auto" : "${height}",
+            minHeight: "${height}",
+            autofocus: autofocus,
             initialEditType: 'wysiwyg',
             usageStatistics: false,
             hideModeSwitch: true,
             placeholder: ${JSON.stringify(placeholder)},
             initialValue: ta.value || ''
           })
+
+          if (hideImageButton) ed.removeToolbarItem('image');
 
           const hardwrap = ${JSON.stringify(hardwrap)}
           const hardBreakFix = ${hardBreakFix.toString()}
